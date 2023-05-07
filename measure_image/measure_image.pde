@@ -6,11 +6,11 @@ boolean dragging = false, measuring = false;
 float quarterDiameterMM = 24.26; // Diameter of a US quarter in millimeters
 float scale, circleDiameterPixels;
 ArrayList<PVector> lines = new ArrayList<PVector>();
-String settingsFilename = "settings.txt";
+File currentImageFile;
 String helperText = "Draw a circle around the quarter to calibrate.";
 
 // Add the following variables for buttons
-int buttonWidth = 70;
+int buttonWidth = 80;
 int buttonHeight = 25;
 int buttonSpacing = 10;
 int buttonX = 10;
@@ -20,7 +20,8 @@ boolean btnClicked = false;
 void setup() {
   size(700, 700);
   surface.setTitle("Makitronics ProMeasure");
-  img = loadImage("pcb_image.jpg"); // Replace with your image filename
+  currentImageFile = new File(sketchPath("data/example.jpg"));
+  img = loadImage(currentImageFile.getAbsolutePath());
   float imgScaleX = width / (float) img.width;
   float imgScaleY = height / (float) img.height;
   scale = min(imgScaleX, imgScaleY);
@@ -30,12 +31,29 @@ void setup() {
   circleStart = new PVector();
   circleEnd = new PVector();
 
-  File settingsFile = new File(sketchPath("data/" + settingsFilename));
+  File settingsFile = new File(sketchPath("data/settings.txt"));
   if (settingsFile.exists()) {
-    String[] settingsLines = loadStrings("data/" + settingsFilename);
+    String[] settingsLines = loadStrings("data/settings.txt");
     circleDiameterPixels = float(settingsLines[0]);
-    measuring = true;
-    helperText = "Drag mouse from point A to point B to measure.";
+    if (circleDiameterPixels > 5) {
+      measuring = true;
+      helperText = "Drag mouse from point A to point B to measure.";
+    } else {
+      measuring = false;
+      helperText = "Draw a circle around the quarter to calibrate.";
+    }
+    
+    if (settingsLines[1].length() > 3) {
+      try {
+        currentImageFile = new File(settingsLines[1]);
+        img = loadImage(currentImageFile.getAbsolutePath());
+        setScale();
+        clearMeasurements();
+        saveSettingsFile();
+      } catch (Exception e) {
+        helperText = "The image file does not exist or cannot be loaded";
+      }
+    }
     println("Settings loaded");
   }
 }
@@ -48,10 +66,12 @@ void draw() {
   fill(200);
   rect(buttonX, buttonY, buttonWidth, buttonHeight);
   rect(buttonX + buttonWidth + buttonSpacing, buttonY, buttonWidth, buttonHeight);
+  rect(buttonX + (buttonWidth + buttonSpacing) * 2, buttonY, buttonWidth, buttonHeight);
   fill(0);
   textSize(12);
   text("Clear", buttonX + buttonWidth / 2 - textWidth("Clear") / 2, buttonY + buttonHeight / 2 + 6);
   text("Undo", buttonX + buttonWidth * 1.5 + buttonSpacing - textWidth("Undo") / 2, buttonY + buttonHeight / 2 + 6);
+  text("Load Image", buttonX + buttonWidth * 2.5 + buttonSpacing * 2 - textWidth("Load Image") / 2, buttonY + buttonHeight / 2 + 6);
   textAlign(CENTER);
   fill(50, 60, 120);
   text(helperText, width / 2, height - 25);
@@ -118,6 +138,10 @@ void mousePressed() {
     undoMeasurement();
     btnClicked = true;
     return;
+  } else if (mouseX > buttonX + (buttonWidth + buttonSpacing) * 2 && mouseX < buttonX + buttonWidth * 3 + buttonSpacing * 2 && mouseY > buttonY && mouseY < buttonY + buttonHeight) {
+    loadImageFromFile();
+    btnClicked = true;
+    return;
   }
   
   if (!measuring) {
@@ -140,11 +164,16 @@ void mouseDragged() {
   }
 }
 
+void saveSettingsFile() {
+  String curImgPath = currentImageFile.getAbsolutePath();
+  saveStrings("data/settings.txt", new String[] {str(circleDiameterPixels), curImgPath});
+}
+
 void mouseReleased() {
   if (!measuring) {
     circleDiameterPixels = dist(circleStart.x, circleStart.y, circleEnd.x, circleEnd.y);
     measuring = true;
-    saveStrings("data/" + settingsFilename, new String[] {str(circleDiameterPixels)});
+    saveSettingsFile();
     helperText = "Drag mouse from point A to point B to measure.";
   } 
   else if (btnClicked) {
@@ -176,5 +205,35 @@ void undoMeasurement() {
   if (lines.size() >= 2) {
     lines.remove(lines.size() - 1);
     lines.remove(lines.size() - 1);
+  }
+}
+
+void loadImageFromFile() {
+  selectInput("Load Image:", "fileSelected");
+}
+
+void fileSelected(File selection) {
+  if (selection == null) {
+    println("No file selected.");
+  } else {
+    try {
+      currentImageFile = selection;
+      img = loadImage(currentImageFile.getAbsolutePath());
+      setScale();
+      clearMeasurements();
+      measuring = false;
+      helperText = "Draw a circle around the quarter to calibrate.";
+      saveSettingsFile();
+    } catch (Exception e) {
+      helperText = "The image file does not exist or cannot be loaded";
+    }
+  }
+}
+
+void setScale() {
+  if (img != null) {
+    float imgScaleX = width / (float) img.width;
+    float imgScaleY = height / (float) img.height;
+    scale = min(imgScaleX, imgScaleY);
   }
 }
