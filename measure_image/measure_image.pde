@@ -18,7 +18,7 @@ int buttonY = 10;
 boolean btnClicked = false;
 
 void setup() {
-  size(700, 700);
+  size(750, 750);
   surface.setTitle("Makitronics ProMeasure");
   currentImageFile = new File(sketchPath("data/example.jpg"));
   img = loadImage(currentImageFile.getAbsolutePath());
@@ -74,7 +74,10 @@ void draw() {
   text("Load Image", buttonX + buttonWidth * 2.5 + buttonSpacing * 2 - textWidth("Load Image") / 2, buttonY + buttonHeight / 2 + 6);
   textAlign(CENTER);
   fill(50, 60, 120);
-  text(helperText, width / 2, height - 25);
+  text(helperText, width / 2, height - 55);
+  fill(100, 100, 120);
+  text("Image must be top-view taken 2-3 feet away. \nMust contain a U.S. quarter for reference.", width / 2 + 180, 25);
+  text("Disclaimer: For experimental use only. Nominal accuracy is ± 0.3 mm.", width / 2, height - 25);
   //restore
   textAlign(LEFT);
   fill(0);
